@@ -1,16 +1,16 @@
 import time
 import network
-
 import machine
 from machine import ADC, Pin
 import uasyncio as asyncio
+import urequests
+import ujson
 import ntptime
 
 import dht
 import dftds
+
 import secret
-import urequests
-import ujson
 
 
 HUMIDITY_POWER_PIN = 15
