@@ -16,15 +16,24 @@ import secret
 HUMIDITY_POWER_PIN = 15
 HUMIDITY_PIN = 14
 PH_PIN = 28
-TDS_PIN = 27
+PH_TEMP_PIN = 27
+TDS_PIN = 26
+TRANSISTOR_PH_PIN = 0
+TRANSISTOR_TDS_PIN = 1
+
 
 onboard_led = Pin("LED", Pin.OUT)
 humidity_pin_power = Pin(HUMIDITY_POWER_PIN, Pin.OUT)
 humidity_pin_power.on()
 temperature_sensor = dht.DHT22(Pin(HUMIDITY_PIN))
 ph_sensor = ADC(Pin(PH_PIN))
+ph_temp_sensor = ADC(Pin(27))
 tds_sensor = dftds.GravityTDS(TDS_PIN, adc_range=65535, k_value_repository=dftds.KValueRepositoryFlash('tds_calibration.json'))
 tds_sensor.begin()
+transistor_ph = Pin(0, Pin.OUT)
+transistor_tds = Pin(1, Pin.OUT)
+transistor_ph.off()
+transistor_tds.off()
 
 s = machine.unique_id()
 chars = []
@@ -129,11 +138,22 @@ async def collect_metrics():
         temperature_sensor.measure()
         temperature = temperature_sensor.temperature()
         humidity = temperature_sensor.humidity()
+        print("temperature", temperature, "humidity", humidity)
 
-        ph_value = collect_ph()
-
+        transistor_ph.off()
+        time.sleep(5)
+        transistor_tds.on()
+        time.sleep(5)
         tds_sensor.temperature = temperature
         tds_value = tds_sensor.update()
+        print("tds sensor", tds_value)
+
+        transistor_tds.off()
+        time.sleep(5)
+        transistor_ph.on()
+        time.sleep(5)
+        ph_value = collect_ph()
+        print("ph temp sensor", ph_temp_sensor.read_u16(), "ph_value", ph_value)
 
         metrics = MetricsRequest(ph_value, tds_value, temperature, humidity, serial_id)
         send_metrics(metrics)
@@ -171,6 +191,7 @@ async def main():
     asyncio.create_task(blink_led())
     await asyncio.sleep(5)
     try:
+        ntptime.timeout = 5
         ntptime.settime()
     except Exception as ex:
         print("failed to set time", ex)
@@ -178,7 +199,7 @@ async def main():
     while True:
         print('Starting to collect metrics')
         asyncio.create_task(collect_metrics())
-        await asyncio.sleep(5)
+        await asyncio.sleep(30)
 
 try:
     asyncio.run(main())
