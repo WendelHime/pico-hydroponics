@@ -25,9 +25,9 @@ TRANSISTOR_TDS_PIN = 1
 onboard_led = Pin("LED", Pin.OUT)
 humidity_pin_power = Pin(HUMIDITY_POWER_PIN, Pin.OUT)
 humidity_pin_power.on()
-temperature_sensor = dht.DHT22(Pin(HUMIDITY_PIN))
-ph_sensor = ADC(Pin(PH_PIN))
-ph_temp_sensor = ADC(Pin(27))
+temperature_sensor = dht.DHT22(Pin(HUMIDITY_PIN, Pin.IN))
+ph_sensor = ADC(Pin(PH_PIN, Pin.IN))
+ph_temp_sensor = ADC(Pin(PH_TEMP_PIN, Pin.IN))
 tds_sensor = dftds.GravityTDS(TDS_PIN, adc_range=65535, k_value_repository=dftds.KValueRepositoryFlash('tds_calibration.json'))
 tds_sensor.begin()
 transistor_ph = Pin(0, Pin.OUT)
@@ -69,7 +69,7 @@ async def connect_to_network():
     else:
         print('connected', wlan_status)
         status = wlan.ifconfig()
-        print('ipconfig: ',status)
+        print('ipconfig: ', status)
 
 async def blink_led():
     wlan_status = wlan.status() 
@@ -110,19 +110,21 @@ async def collect_metrics():
         print("temperature", temperature, "humidity", humidity)
 
         transistor_ph.off()
-        time.sleep(5)
+        time.sleep(0.5)
         transistor_tds.on()
-        time.sleep(5)
+        time.sleep(0.5)
         tds_sensor.temperature = temperature
         tds_value = tds_sensor.update()
         print("tds sensor", tds_value)
 
         transistor_tds.off()
-        time.sleep(5)
+        time.sleep(0.5)
         transistor_ph.on()
-        time.sleep(5)
+        time.sleep(0.5)
         ph_value = collect_ph()
-        print("ph temp sensor", ph_temp_sensor.read_u16(), "ph_value", ph_value)
+        temperature_value = collect_ph_temperature()
+        transistor_ph.off()
+        print("ph temp sensor", temperature_value*60/5, "ph_value", ph_value)
 
         metrics = MetricsRequest(ph_value, tds_value, temperature, humidity, serial_id)
         send_metrics(metrics)
@@ -146,6 +148,17 @@ def collect_ph():
     ph_value = -4.852947599489467*ph_voltage+23.73194905699139
     return ph_value
 
+def collect_ph_temperature():
+    temperature_voltages = []
+    for i in range(10):
+        voltage = ph_temp_sensor.read_u16()
+        temperature_voltages.append(voltage)
+        time.sleep(0.1)
+    avg_temperature_voltage = sum(temperature_voltages) / len(temperature_voltages)
+    # We're providing to the pH 5V
+    temperature_voltage = (avg_temperature_voltage * 5 / 65535)
+    return temperature_voltage
+
 def send_metrics(metrics):
     data = ujson.dumps(metrics.__dict__)
     headers = {"Content-Type": "application/json", "x-api-key": secret.api_key}
@@ -168,7 +181,7 @@ async def main():
     while True:
         print('Starting to collect metrics')
         asyncio.create_task(collect_metrics())
-        await asyncio.sleep(30)
+        await asyncio.sleep(5)
 
 try:
     asyncio.run(main())
