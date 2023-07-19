@@ -110,19 +110,19 @@ async def collect_metrics():
         print("temperature", temperature, "humidity", humidity)
 
         transistor_ph.off()
-        time.sleep(5)
+        time.sleep(0.1)
         transistor_tds.on()
-        time.sleep(5)
+        time.sleep(0.1)
         tds_sensor.temperature = temperature
         tds_value = tds_sensor.update()
         print("tds sensor", tds_value)
 
         transistor_tds.off()
-        time.sleep(5)
+        time.sleep(0.1)
         transistor_ph.on()
-        time.sleep(5)
+        time.sleep(0.1)
         ph_value = collect_ph()
-        print("ph temp sensor", ph_temp_sensor.read_u16(), "ph_value", ph_value)
+        print("ph temp sensor", (ph_temp_sensor.read_u16()/65535)*60, "ph_value", ph_value)
 
         metrics = MetricsRequest(ph_value, tds_value, temperature, humidity, serial_id)
         send_metrics(metrics)
@@ -168,7 +168,7 @@ async def main():
     while True:
         print('Starting to collect metrics')
         asyncio.create_task(collect_metrics())
-        await asyncio.sleep(30)
+        await asyncio.sleep(5)
 
 try:
     asyncio.run(main())
