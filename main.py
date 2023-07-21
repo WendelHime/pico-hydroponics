@@ -123,6 +123,7 @@ async def collect_metrics():
         time.sleep(0.1)
         ph_value = collect_ph()
         print("ph temp sensor", (ph_temp_sensor.read_u16()/65535)*60, "ph_value", ph_value)
+        transistor_ph.off()
 
         metrics = MetricsRequest(ph_value, tds_value, temperature, humidity, serial_id)
         send_metrics(metrics)
