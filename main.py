@@ -13,13 +13,13 @@ import dftds
 import secret
 
 
-HUMIDITY_POWER_PIN = 15
-HUMIDITY_PIN = 14
+HUMIDITY_POWER_PIN = 0
+HUMIDITY_PIN = 1
 PH_PIN = 28
 PH_TEMP_PIN = 27
 TDS_PIN = 26
-TRANSISTOR_PH_PIN = 0
-TRANSISTOR_TDS_PIN = 1
+TRANSISTOR_PH_PIN = 22
+TRANSISTOR_TDS_PIN = 21
 
 
 onboard_led = Pin("LED", Pin.OUT)
@@ -27,11 +27,11 @@ humidity_pin_power = Pin(HUMIDITY_POWER_PIN, Pin.OUT)
 humidity_pin_power.on()
 temperature_sensor = dht.DHT22(Pin(HUMIDITY_PIN))
 ph_sensor = ADC(Pin(PH_PIN))
-ph_temp_sensor = ADC(Pin(27))
+ph_temp_sensor = ADC(Pin(PH_TEMP_PIN))
 tds_sensor = dftds.GravityTDS(TDS_PIN, adc_range=65535, k_value_repository=dftds.KValueRepositoryFlash('tds_calibration.json'))
 tds_sensor.begin()
-transistor_ph = Pin(0, Pin.OUT)
-transistor_tds = Pin(1, Pin.OUT)
+transistor_ph = Pin(TRANSISTOR_PH_PIN, Pin.OUT)
+transistor_tds = Pin(TRANSISTOR_TDS_PIN, Pin.OUT)
 transistor_ph.off()
 transistor_tds.off()
 
