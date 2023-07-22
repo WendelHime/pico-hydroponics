@@ -1,14 +1,11 @@
 import time
 import network
 
-import secret
-
-
-async def connect_to_network():
+async def connect_to_network(ssid, password):
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
     wlan.config(pm = 0xa11140)
-    wlan.connect(secret.ssid, secret.password)
+    wlan.connect(ssid, password)
     max_wait = 10
     while max_wait > 0:
         wlan_status = wlan.status() 
