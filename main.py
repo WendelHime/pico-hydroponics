@@ -3,13 +3,13 @@ import machine
 import uasyncio as asyncio
 import ntptime
 
-import secret
-import api
-import logic
+from api import APModeAPI
+from logic import MetricsCollector, Calibration
 import ph
 import tds
 import humidity
 import water_temperature
+import ap_network
 import std_network
 
 
@@ -46,13 +46,32 @@ def init_sensors():
     return sensors
 
 async def main():
-    if not secret.ssid:
+    serial_id = get_serial_id()
+    sensors = init_sensors()
+
+    try:
+        __import__('config')
+    except ImportError:
         # initialize ap mode
         print("Initializing AP mode for general settings/calibration")
-        api.app.run()
+        ssid = ap_network.build_ssid(serial_id)
+        password = str(time.time())
+        ap = ap_network.create_network(ssid, password)
+        # print qr code
+
+        calibration_logic = Calibration(sensors[2], sensors[1])
+        APModeAPI(calibration_logic).app.run()
+        ap_network.stop_ap_mode(ap)
+        await asyncio.sleep(1)
+        machine.reset()
+
+    import config
+
+    sensors[2].m = config.m
+    sensors[2].b = config.b
 
     print('Connecting to network...')
-    asyncio.create_task(std_network.connect_to_network())
+    asyncio.create_task(std_network.connect_to_network(config.ssid, config.password))
     await asyncio.sleep(5)
     try:
         ntptime.timeout = 5
@@ -60,8 +79,7 @@ async def main():
     except Exception as ex:
         print("failed to set time", ex)
 
-    serial_id = get_serial_id()
-    metrics_collector = logic.MetricsCollector(serial_id, secret.api_key, sensors=init_sensors())
+    metrics_collector = MetricsCollector(serial_id, config.api_key, sensors=sensors)
     while True:
         onboard_led.on()
         print('Starting to collect metrics')
