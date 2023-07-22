@@ -3,7 +3,7 @@ import machine
 
 
 class PHSensor:
-    def __init__(self, ph_pin_number, transistor_pin_number, b=-4.852947599489467, a=23.73194905699139):
+    def __init__(self, ph_pin_number, transistor_pin_number, m=-4.852947599489467, b=23.73194905699139):
         """
         PHSensor encapsulate pH module functionalities
         Args:
@@ -15,27 +15,27 @@ class PHSensor:
         self.probe = machine.ADC(ph_pin_number)
         self.transistor = machine.Pin(transistor_pin_number, machine.Pin.OUT)
         self.transistor.off()
+        self.m = m
         self.b = b
-        self.a = a
 
 
     def collect_ph_voltages(self):
+        self.transistor.on()
+        time.sleep(0.1)
         ph_voltages = []
         for i in range(10):
             voltage = self.probe.read_u16()
             ph_voltages.append(voltage)
             time.sleep(0.1)
+        self.transistor.off()
+        time.sleep(0.1)
         return ph_voltages
 
     def collect_metric(self):
-        self.transistor.on()
-        time.sleep(0.1)
         ph_voltages = self.collect_ph_voltages()
-        self.transistor.off()
-        time.sleep(0.1)
         avg_ph_voltage = sum(ph_voltages) / len(ph_voltages)
         # We're providing to the pH 5V
-        ph_voltage = (avg_ph_voltage * 5 / 65535)
+        x = (avg_ph_voltage * 5 / 65535)
         # linear regression after calibrating ph probe
-        ph_value = self.b*ph_voltage+self.a
+        ph_value = self.m*x+self.b
         return {"ph_value": ph_value}
