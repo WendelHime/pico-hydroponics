@@ -1,0 +1,184 @@
+openapi: 3.0.3
+info:
+  title: pico-hydroponics
+  description: |-
+    When the raspberry pico is turned on for the first time it shouldn't have any configs and it'll start as an AP mode. This OpenAPI specs should demonstrate which requests are available for this service.
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: wendelhime@hotmail.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 0.0.1
+servers:
+  - url: http://192.168.4.1/
+tags:
+  - name: calibration
+    description: Calibrate pH and TDS sensors
+  - name: general
+    description: Other operations available 
+paths:
+  /calibrate/tds:
+    post:
+      tags:
+        - calibration
+      summary: Calibrate TDS sensor
+      description: This request makes the raspberry pico read the value from the TDS probe and based on provided buffer value will calculate the coefficient used for reading the correct value from the nutrient or liquid.
+      operationId: calibrate-tds
+      parameters:
+        - name: buffer
+          in: query
+          description: The buffer solution value
+          schema:
+            type: number
+            default: 1413
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TDSCalibrationResponse'
+        '500':
+          description: Calibration failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TDSCalibrationError'
+  /calibrate/ph:
+    get:
+      tags:
+        - calibration
+      summary: Makes pH sensor read the probe value
+      description: This request makes the raspberry pico read the value from the pH probe and based on provided buffer value will calculate the linear regression m and b values. The linear regression equation will be applied every time when we're collecting the pH metrics. If you input an wrong buffer value please consider turning on and off the raspberry for resetting those buffer values.
+      operationId: read-pH
+      parameters:
+        - name: buffer
+          in: query
+          description: The buffer solution value
+          schema:
+            type: number
+            default: 7.0
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPHSuccess'
+    post:
+      tags:
+        - calibration
+      summary: Generate linear regression constant values based on previous reads
+      description: This request makes the raspberry pico retrieve the previous buffers and voltages reads collected by the pH probe and calculate the constant values used on when converting the pH voltage to the pH value
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostPHSuccess'
+  /credentials:
+    post:
+      tags:
+        - general
+      summary: Store credentials
+      description: This requests store on raspberry pico memory flash some variables that will be used for sending metrics through the internet. Please don't share your raspberry pico with anyone.
+      requestBody:
+        $ref: '#/components/requestBodies/Credentials'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostCredentialsSuccess'
+  /shutdown:
+    post:
+      tags:
+        - general
+      summary: Shutdown AP mode and reset raspberry pico
+      description: This request makes the raspberry pico turn off the AP mode/HTTP server and reboot. If you've setup everything and calibrated, you can press the small button on the board for initializing the AP mode again.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShutdownResponse'
+      
+        
+components:
+  schemas:
+    TDSCalibrationResponse:
+      type: object
+      properties:
+        k:
+          type: number
+          format: float32
+          example: 0.4546772
+    TDSCalibrationError:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "failed to calibrate TDS"
+    GetPHSuccess:
+      type: object
+      properties:
+        ph_voltage:
+          type: number
+          format: float32
+          example: 2554
+        buffer:
+          type: number
+          format: float32
+          example: 7.0
+        status:
+          type: string
+          example: 'ok'
+    PostPHSuccess:
+      type: object
+      properties:
+        m:
+          type: number
+          format: float32
+          example: -4.852947599489467
+        b:
+          type: number
+          format: float32
+          example: 23.73194905699139
+    PostCredentialsSuccess:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+    Credentials:
+      type: object
+      properties:
+        ssid:
+          type: string
+          example: 'your_wifi_name'
+        password:
+          type: string
+          example: 'your_wifi_password'
+        api_key:
+          type: string
+          example: 'service api key'
+        user_id:
+          type: string
+          example: 'your_user_id'
+    ShutdownResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'service shutting down'
+  requestBodies:
+    Credentials:
+      description: Credentials used for sending collected metrics to the service
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Credentials'

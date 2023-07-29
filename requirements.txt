@@ -1,3 +1,4 @@
 micropython-dftds
 microdot
 Adafruit-DHT
+github:JASchilz/uQR

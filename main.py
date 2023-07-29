@@ -1,16 +1,11 @@
 import time
 import machine
 import uasyncio as asyncio
-import ntptime
 
-from api import APModeAPI
+import api 
 from logic import MetricsCollector, Calibration
-import ph
-import tds
-import humidity
-import water_temperature
-import ap_network
-import std_network
+from sensors import ph, tds, humidity, water_temperature
+from local_network import ap_network, std_network
 
 
 HUMIDITY_POWER_PIN = 0
@@ -54,26 +49,33 @@ async def main():
     except ImportError:
         # initialize ap mode
         print("Initializing AP mode for general settings/calibration")
-        ssid = ap_network.build_ssid(serial_id)
-        password = str(time.time())
+        ssid = "hydroponics"
+        password = serial_id
+        print(ssid, password)
         ap = ap_network.create_network(ssid, password)
-        # print qr code
+
+        from uQR import QRCode
+        qr = QRCode()
+        qr.add_data('WIFI:S:{};T:WPA;P:{};H:false;;'.format(ssid,password), optimize=0)
+        print(qr.render_matrix())
 
         calibration_logic = Calibration(sensors[2], sensors[1])
-        APModeAPI(calibration_logic).app.run()
+        api.build_ap_mode(calibration_logic).run(debug=True)
         ap_network.stop_ap_mode(ap)
         await asyncio.sleep(1)
         machine.reset()
 
     import config
 
-    sensors[2].m = config.m
-    sensors[2].b = config.b
+    #sensors[2].m = config.m
+    #sensors[2].b = config.b
 
     print('Connecting to network...')
+    print(config.ssid, config.password)
     asyncio.create_task(std_network.connect_to_network(config.ssid, config.password))
     await asyncio.sleep(5)
     try:
+        import ntptime
         ntptime.timeout = 5
         ntptime.settime()
     except Exception as ex:

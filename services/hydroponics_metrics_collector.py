@@ -28,9 +28,11 @@ class MetricsRequest:
 
 
 def send_metrics(metrics, api_key):
+    print(metrics)
     data = ujson.dumps(metrics.__dict__)
+    print(data)
     headers = {"Content-Type": "application/json", "x-api-key": api_key}
-    response = urequests.post('https://hydroponics-gateway-djqh2e23.ue.gateway.dev/metrics', headers=headers, data=data)
+    response = urequests.post('https://metrics-collector-djqh2e23.ue.gateway.dev/metrics', headers=headers, data=data)
     if response.status_code != 200:
         print(response.text)
     response.close()

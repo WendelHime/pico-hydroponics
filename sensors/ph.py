@@ -19,14 +19,14 @@ class PHSensor:
         self.b = b
 
 
-    def collect_ph_voltages(self):
+    def collect_ph_voltages(self, reading_interval=0.1):
         self.transistor.on()
         time.sleep(0.1)
         ph_voltages = []
         for i in range(10):
             voltage = self.probe.read_u16()
             ph_voltages.append(voltage)
-            time.sleep(0.1)
+            time.sleep(reading_interval)
         self.transistor.off()
         time.sleep(0.1)
         return ph_voltages
